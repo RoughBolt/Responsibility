@@ -17,9 +17,9 @@ void main() async {
     }
   }
 
-  print('Testing Gemini (gemini-3.5-flash)...');
+  print('Testing Gemini (gemini-3.5-flash-lite)...');
   final geminiFuture = http.post(
-    Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$geminiKey'),
+    Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=$geminiKey'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
       'contents': [
