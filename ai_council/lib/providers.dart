@@ -66,7 +66,7 @@ abstract class AIProvider {
 // 1. GEMINI PROVIDER — Primary Analyst
 // ─────────────────────────────────────────────
 class GeminiProvider implements AIProvider {
-  static const _model = 'gemini-1.5-flash';
+  static const _model = 'gemini-3.5-flash';
   static const _baseUrl =
       'https://generativelanguage.googleapis.com/v1beta/models/$_model:generateContent';
 
@@ -154,8 +154,7 @@ class GeminiProvider implements AIProvider {
 // 2. GROQ PROVIDER — Critical Thinker
 // ─────────────────────────────────────────────
 class GroqProvider implements AIProvider {
-  // Llama 3.3 70B Versatile on Groq is ultra-fast & top quality
-  static const _model = 'llama-3.3-70b-versatile';
+  static const _model = 'openai/gpt-oss-20b';
   static const _baseUrl = 'https://api.groq.com/openai/v1/chat/completions';
 
   @override

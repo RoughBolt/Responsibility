@@ -130,24 +130,19 @@ Tap "Ask Another Question"
 
 ---
 
-## 6. AI Provider Status
-
 | Provider | Model Used | Role | Environment Variable | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Gemini** | `gemini-1.5-flash` | Primary Analyst + Synthesizer | `GEMINI_API_KEY` | Integrated & Live |
-| **Groq** | `llama-3.3-70b-versatile` | Critical Thinker | `GROQ_API_KEY` | Integrated & Live |
-| **OpenRouter** | `meta-llama/llama-3.3-70b-instruct:free` | Independent Expert | `OPENROUTER_API_KEY` | Integrated & Live |
+| **Gemini** | `gemini-3.5-flash` | Primary Analyst + Synthesizer | `GEMINI_API_KEY` | Gemini API Integration: WORKING |
+| **Groq** | `openai/gpt-oss-20b` | Critical Thinker | `GROQ_API_KEY` | Groq API Integration: WORKING |
 
 ---
 
-## 7. Agent Roles
+## 7. Two-Agent MVP Architecture
 
-- **Gemini (Primary Analyst):** Focuses on core factual reasoning, contextual background, clarity, and comprehensive breakdown.
-- **Groq (Critical Thinker):** Challenges assumptions, flags reasoning vulnerabilities, notes missing nuances, and presents counter-arguments.
-- **OpenRouter (Independent Expert):** Contributes practical solutions, alternative methodologies, and actionable next steps.
-- **Council Critic (Intermediate Stage):** Synthesizes agreements vs. points of friction and produces concrete synthesis guidelines.
-- **Responsible Safety Officer (Intermediate Stage):** Audits content for harmful advice, bias, or privacy breaches.
-- **Council Synthesizer (Final Stage):** Produces the ultimate cohesive consensus answer.
+- **Gemini Role:** Primary Analyst + Response Comparator + Final Synthesizer
+- **Groq Role:** Critical Thinker (Challenges assumptions, identifies weaknesses/missing info)
+- **Parallel Dispatch:** Simultaneous `Future.wait` dispatch to Gemini and Groq
+- **OpenRouter:** Excluded from MVP (No API key provided)
 
 ---
 
