@@ -123,32 +123,42 @@ Tap "Ask Another Question"
 - **REASON:** Core ethical hackathon requirement.
 - **STATUS:** Completed.
 
-### Decision 005 — Multi-Platform Readiness (Android & Chrome Web)
-- **DECISION:** Added Android `INTERNET` and `ACCESS_NETWORK_STATE` permissions to `AndroidManifest.xml` and validated production web compilation (`flutter build web`).
-- **REASON:** Enables instant demoing on either mobile phone (USB debugging/APK) or desktop Chrome.
+### Decision 006 — NIST AI Evaluation Board Integration
+- **DECISION:** Integrated a dedicated 12-category NIST GAI Risk-Informed Assessment board into the multi-agent pipeline.
+- **REASON:** Transparently exposes HOW AI responses are evaluated against recognized AI risks and guardrails.
+- **IMPACT:** Complete explainability for users and judges without altering core multi-agent architecture.
 - **STATUS:** Completed.
 
 ---
 
-| Provider | Model Used | Role | Environment Variable | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **Gemini** | `gemini-3.5-flash` | Primary Analyst + Synthesizer | `GEMINI_API_KEY` | Gemini API Integration: WORKING |
-| **Groq** | `openai/gpt-oss-20b` | Critical Thinker | `GROQ_API_KEY` | Groq API Integration: WORKING |
+## 8. NIST Evaluation Board Decision
+
+### Why:
+Transparency in enterprise AI is essential. Users and compliance auditors must be able to see not only the final answer, but also the specific AI risk categories and guardrails evaluated during model deliberation.
+
+### Evaluated Framework & Categories:
+The board uses the 12 NIST GAI Risk-Informed Categories:
+1. CBRN Information or Capabilities
+2. Confabulation
+3. Dangerous, Violent, or Hateful Content
+4. Data Privacy
+5. Environmental Impacts
+6. Harmful Bias or Homogenization
+7. Human-AI Configuration
+8. Information Integrity
+9. Information Security
+10. Intellectual Property
+11. Obscene, Degrading, and/or Abusive Content
+12. Value Chain and Component Integration
+
+### IMPORTANT DISCLAIMER:
+- **NIST-INFORMED ASSESSMENT:** The system performs an AI-Assisted NIST GAI Risk-Informed Assessment.
+- **NOT NIST CERTIFIED / APPROVED:** The application does NOT claim official NIST certification, endorsement, or approved compliance scoring.
+- **Scoring Heuristics:** Risk scores (0-100: LOW, MODERATE, HIGH, CRITICAL) are prototype evaluation heuristics designed for visualization and risk awareness.
 
 ---
 
-## 7. Two-Agent MVP Architecture
-
-- **Gemini Role:** Primary Analyst + Response Comparator + Final Synthesizer
-- **Groq Role:** Critical Thinker (Challenges assumptions, identifies weaknesses/missing info)
-- **Parallel Dispatch:** Simultaneous `Future.wait` dispatch to Gemini and Groq
-- **OpenRouter:** Excluded from MVP (No API key provided)
-
----
-
----
-
-## 8. API Configuration Decision
+## 9. API Configuration Decision
 
 ### Current providers:
 - **Gemini**
@@ -159,7 +169,7 @@ Tap "Ask Another Question"
 - **Reason:** No API key currently available.
 
 ### Documented Roles:
-- **Gemini Role:** Primary Analyst + Comparison + Final Synthesizer.
+- **Gemini Role:** Primary Analyst + Comparison + NIST Risk Evaluator + Final Synthesizer.
 - **Groq Role:** Critical Thinking Agent.
 
 ### Key Management:
@@ -169,15 +179,14 @@ Configured via `.env` file (included in `.gitignore`):
 
 Templates provided in `.env.example`. **No secret keys are stored in source code or committed to git.**
 
-Templates provided in `.env.example`. **No secret keys are stored in source control.**
-
 ---
 
-## 9. Safety Architecture
+## 10. Safety Architecture
 
-- **Mechanism:** `Gemini Provider Safety` (incorporating Google Harm Categories: Harassment, Hate Speech, Dangerous Content at API level) + dedicated AI Safety Officer prompt auditing prompt and responses.
+- **Mechanism:** `Gemini Provider Safety` (incorporating Google Harm Categories: Harassment, Hate Speech, Dangerous Content at API level) + `NIST AI Evaluation Board` + dedicated AI Safety Officer prompt auditing prompt and responses.
 - **ShieldGemma Integration:** Not Included in MVP.
   - *Reason:* ShieldGemma requires specialized on-device weights or custom hosted Triton/vLLM endpoints incompatible with a rapid 90-minute mobile build.
+  - *Integrity Rule:* Honestly labeled as `Gemini Provider Safety` and `NIST GAI Risk-Informed Assessment` in the UI.
   - *Integrity Rule:* Honestly labeled as `Gemini Provider Safety` in the UI.
 
 ---

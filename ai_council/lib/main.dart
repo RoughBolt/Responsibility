@@ -136,7 +136,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _showKeyConfigDialog() {
     final geminiCtrl = TextEditingController(text: ApiConfig.geminiKey);
     final groqCtrl = TextEditingController(text: ApiConfig.groqKey);
-    final openRouterCtrl = TextEditingController(text: ApiConfig.openRouterKey);
 
     showDialog(
       context: context,
@@ -155,15 +154,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Configure at least one real API key to activate the council.',
+                'Configure your API key in .env or paste below.',
                 style: GoogleFonts.inter(fontSize: 12, color: Colors.white70),
               ),
               const SizedBox(height: 16),
               _buildKeyField('Gemini API Key (Primary)', geminiCtrl, 'GEMINI_API_KEY'),
               const SizedBox(height: 12),
               _buildKeyField('Groq API Key (Critical Thinker)', groqCtrl, 'GROQ_API_KEY'),
-              const SizedBox(height: 12),
-              _buildKeyField('OpenRouter API Key (Independent)', openRouterCtrl, 'OPENROUTER_API_KEY'),
             ],
           ),
         ),
@@ -177,7 +174,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               setState(() {
                 ApiConfig.geminiKey = geminiCtrl.text.trim();
                 ApiConfig.groqKey = groqCtrl.text.trim();
-                ApiConfig.openRouterKey = openRouterCtrl.text.trim();
               });
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -293,9 +289,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                       ),
                       Text(
-                        'Multiple AI Perspectives. One Better Answer.',
+                        'Multiple AI Perspectives + NIST Risk Evaluation Board',
                         style: GoogleFonts.inter(
-                          fontSize: 12,
+                          fontSize: 11,
                           color: Colors.white54,
                           letterSpacing: 0.3,
                         ),
@@ -312,6 +308,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildAgentStatus(List<AgentConfig> agents) {
+    // Only display Gemini and Groq per 2-Agent MVP specification
+    final activeAgents = agents.where((a) => a.id == 'gemini' || a.id == 'groq').toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -336,7 +335,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
         const SizedBox(height: 10),
         Row(
-          children: agents.map((agent) {
+          children: activeAgents.map((agent) {
             return Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -346,13 +345,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   available: agent.status == ProviderStatus.available,
                   icon: agent.id == 'gemini'
                       ? Icons.psychology_rounded
-                      : (agent.id == 'groq' ? Icons.bolt_rounded : Icons.public_rounded),
+                      : Icons.bolt_rounded,
                 ),
               ),
             );
           }).toList(),
         ),
-        if (!agents.any((a) => a.status == ProviderStatus.available))
+        if (!activeAgents.any((a) => a.status == ProviderStatus.available))
           Padding(
             padding: const EdgeInsets.only(top: 10),
             child: Container(
@@ -368,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Tap "Setup Keys" above or create .env with GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY.',
+                      'API keys loaded in .env or tap "Setup Keys" above to activate council.',
                       style: GoogleFonts.inter(fontSize: 12, color: kWarning),
                     ),
                   ),
@@ -409,7 +408,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               height: 1.6,
             ),
             decoration: InputDecoration(
-              hintText: 'Ask a question and let multiple AI agents analyze it together...',
+              hintText: 'Ask a question and let multiple AI agents analyze and evaluate it against NIST risk guardrails...',
               hintStyle: GoogleFonts.inter(
                 color: Colors.white24,
                 fontSize: 14,
@@ -494,11 +493,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildPipelinePreview() {
     final stages = [
-      (Icons.psychology_outlined, 'Gathering independent perspectives'),
+      (Icons.psychology_outlined, 'Gathering independent perspectives (Gemini & Groq)'),
       (Icons.compare_arrows_rounded, 'Comparing viewpoints (agreements & gaps)'),
       (Icons.gavel_rounded, 'Controlled critique & debate round'),
+      (Icons.shield_outlined, 'NIST AI Evaluation Board (12 GAI Risks & Guardrails)'),
       (Icons.verified_user_outlined, 'Responsible AI safety check'),
-      (Icons.auto_awesome_rounded, 'Building final consensus answer'),
+      (Icons.auto_awesome_rounded, 'Building final consensus answer with mitigation'),
     ];
     return Container(
       padding: const EdgeInsets.all(20),
@@ -641,10 +641,8 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
               ),
               const SizedBox(height: 36),
               if (update != null) ...[
-                // Agent parallel tracking
                 ...update.agentResponses.map((r) => _AgentProgressTile(response: r)),
                 const SizedBox(height: 24),
-                // Pipeline stages
                 _StagePill(
                   label: 'Comparing Viewpoints (Agreements & Gaps)',
                   active: update.stage == PipelineStage.comparing,
@@ -655,6 +653,12 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                   label: 'Controlled Critique Round',
                   active: update.stage == PipelineStage.critiquing,
                   done: update.stage.index > PipelineStage.critiquing.index,
+                ),
+                const SizedBox(height: 8),
+                _StagePill(
+                  label: 'NIST AI Evaluation Board (12 Risks & Guardrails)',
+                  active: update.stage == PipelineStage.nistEvaluation,
+                  done: update.stage.index > PipelineStage.nistEvaluation.index,
                 ),
                 const SizedBox(height: 8),
                 _StagePill(
@@ -704,7 +708,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
 }
 
 // ─────────────────────────────────────────────
-// RESULT SCREEN
+// RESULT SCREEN WITH NIST EVALUATION TAB SYSTEM
 // ─────────────────────────────────────────────
 class ResultScreen extends StatefulWidget {
   final CouncilResult result;
@@ -717,7 +721,9 @@ class ResultScreen extends StatefulWidget {
 class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animCtrl;
   late Animation<double> _fadeAnim;
+  int _selectedTab = 0; // 0: Final Consensus, 1: NIST Evaluation Board, 2: Individual Perspectives
   final Set<String> _expandedAgents = {};
+  final Set<int> _expandedNistRisks = {2, 8, 9}; // Expand Confabulation, Integrity, Security by default
 
   @override
   void initState() {
@@ -725,7 +731,6 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     _animCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
     _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     _animCtrl.forward();
-    // Default expand first successful agent
     if (widget.result.successfulResponses.isNotEmpty) {
       _expandedAgents.add(widget.result.successfulResponses.first.agent.id);
     }
@@ -752,14 +757,12 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                 child: Column(
                   children: [
                     _buildMeta(r),
+                    const SizedBox(height: 16),
+                    _buildTabSelector(),
                     const SizedBox(height: 20),
-                    _buildFinalAnswer(r),
-                    const SizedBox(height: 16),
-                    if (r.analysis != null) _buildCouncilInsights(r),
-                    const SizedBox(height: 16),
-                    _buildIndividualPerspectives(r),
-                    const SizedBox(height: 16),
-                    if (r.safety != null) _buildSafetyCard(r.safety!),
+                    if (_selectedTab == 0) _buildConsensusTab(r),
+                    if (_selectedTab == 1) _buildNistEvaluationBoardTab(r),
+                    if (_selectedTab == 2) _buildPerspectivesTab(r),
                     const SizedBox(height: 32),
                     _buildAskAnotherButton(context),
                   ],
@@ -804,27 +807,28 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     if (safetyStatus == SafetyStatus.flagged) safetyColor = kWarning;
     if (safetyStatus == SafetyStatus.blocked) safetyColor = kDanger;
 
+    final nistScore = r.nistEvaluation?.overallRiskScore ?? 12;
+    Color nistColor = kSuccess;
+    if (nistScore >= 51) {
+      nistColor = kDanger;
+    } else if (nistScore >= 26) {
+      nistColor = kWarning;
+    }
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
         _MetaBadge(
           icon: Icons.groups_rounded,
-          label: '${r.participatingAgentCount} / 3 Agents Responded',
+          label: '${r.participatingAgentCount} / 2 Agents Responded',
           color: kPrimary,
         ),
-        if (r.isSingleProviderMode)
-          const _MetaBadge(
-            icon: Icons.person_rounded,
-            label: 'Single-Provider Fallback Mode',
-            color: kWarning,
-          )
-        else
-          const _MetaBadge(
-            icon: Icons.handshake_rounded,
-            label: 'Multi-Agent Mode',
-            color: kAccent,
-          ),
+        _MetaBadge(
+          icon: Icons.shield_rounded,
+          label: 'NIST Risk Score: $nistScore/100',
+          color: nistColor,
+        ),
         if (safetyStatus != null)
           _MetaBadge(
             icon: Icons.verified_user_outlined,
@@ -835,7 +839,58 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildFinalAnswer(CouncilResult r) {
+  Widget _buildTabSelector() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: kCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        children: [
+          _TabButton(
+            title: 'FINAL ANSWER',
+            icon: Icons.auto_awesome_rounded,
+            isSelected: _selectedTab == 0,
+            onTap: () => setState(() => _selectedTab = 0),
+          ),
+          _TabButton(
+            title: 'NIST BOARD',
+            icon: Icons.shield_outlined,
+            isSelected: _selectedTab == 1,
+            badge: '12 RISKS',
+            onTap: () => setState(() => _selectedTab = 1),
+          ),
+          _TabButton(
+            title: 'AGENTS',
+            icon: Icons.psychology_rounded,
+            isSelected: _selectedTab == 2,
+            onTap: () => setState(() => _selectedTab = 2),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // TAB 0: FINAL CONSENSUS & INSIGHTS
+  // ─────────────────────────────────────────────
+  Widget _buildConsensusTab(CouncilResult r) {
+    return Column(
+      children: [
+        _buildFinalAnswerCard(r),
+        const SizedBox(height: 16),
+        _buildNistQuickBanner(r),
+        const SizedBox(height: 16),
+        if (r.analysis != null) _buildCouncilInsights(r),
+        const SizedBox(height: 16),
+        if (r.safety != null) _buildSafetyCard(r.safety!),
+      ],
+    );
+  }
+
+  Widget _buildFinalAnswerCard(CouncilResult r) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -929,6 +984,51 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     );
   }
 
+  Widget _buildNistQuickBanner(CouncilResult r) {
+    final nist = r.nistEvaluation ?? NistEvaluationResult.empty();
+    return GestureDetector(
+      onTap: () => setState(() => _selectedTab = 1),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: kCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kAccent.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: kAccent.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.shield_outlined, color: kAccent, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'NIST GAI Risk-Informed Assessment',
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Overall Risk: ${nist.overallRiskScore}/100 (${nist.overallStatus}) · 12 Categories Audited',
+                    style: GoogleFonts.inter(fontSize: 11, color: Colors.white54),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: kAccent, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCouncilInsights(CouncilResult r) {
     final analysis = r.analysis!;
     final critique = r.critique;
@@ -962,35 +1062,290 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildIndividualPerspectives(CouncilResult r) {
-    final responses = r.successfulResponses;
-    if (responses.isEmpty) return const SizedBox.shrink();
+  // ─────────────────────────────────────────────
+  // TAB 1: NIST AI EVALUATION BOARD
+  // ─────────────────────────────────────────────
+  Widget _buildNistEvaluationBoardTab(CouncilResult r) {
+    final nist = r.nistEvaluation ?? NistEvaluationResult.empty();
 
-    return _ResultCard(
-      title: 'INDIVIDUAL PERSPECTIVES',
-      icon: Icons.psychology_alt_rounded,
-      iconColor: const Color(0xFF60CFFF),
-      child: Column(
-        children: responses.asMap().entries.map((entry) {
-          final i = entry.key;
-          final resp = entry.value;
-          final isExpanded = _expandedAgents.contains(resp.agent.id);
-          return Padding(
-            padding: EdgeInsets.only(bottom: i < responses.length - 1 ? 12 : 0),
-            child: _AgentResponseCard(
-              response: resp,
-              isExpanded: isExpanded,
-              onToggle: () => setState(() {
-                if (isExpanded) {
-                  _expandedAgents.remove(resp.agent.id);
-                } else {
-                  _expandedAgents.add(resp.agent.id);
-                }
-              }),
-            ),
-          );
-        }).toList(),
-      ),
+    Color statusColor = kSuccess;
+    if (nist.overallRiskScore >= 76) {
+      statusColor = kDanger;
+    } else if (nist.overallRiskScore >= 51) {
+      statusColor = kWarning;
+    } else if (nist.overallRiskScore >= 26) {
+      statusColor = const Color(0xFFFF9F43);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Disclaimer Banner
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.blueAccent.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.info_outline_rounded, color: Colors.blueAccent, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'NIST GAI Risk-Informed Assessment',
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    Text(
+                      'AI-Assisted Prototype Evaluation — Not an official NIST certification.',
+                      style: GoogleFonts.inter(fontSize: 10, color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Section 1: Overall Risk Assessment Card
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: kCard,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.speed_rounded, color: kAccent, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'OVERALL RISK ASSESSMENT',
+                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: kAccent, letterSpacing: 1.2),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${nist.overallStatus} RISK',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: statusColor),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '${nist.overallRiskScore}',
+                    style: GoogleFonts.inter(fontSize: 42, fontWeight: FontWeight.w900, color: statusColor),
+                  ),
+                  Text(
+                    ' / 100',
+                    style: GoogleFonts.inter(fontSize: 16, color: Colors.white38, fontWeight: FontWeight.w600),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'AI Agreement: ${nist.agreement.agreementPercentage}%',
+                    style: GoogleFonts.inter(fontSize: 12, color: kPrimary, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: nist.overallRiskScore / 100.0,
+                  minHeight: 8,
+                  backgroundColor: Colors.white10,
+                  color: statusColor,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                nist.overallExplanation,
+                style: GoogleFonts.inter(fontSize: 13, color: Colors.white70, height: 1.5),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Section 2: Evaluation Scope Summary
+        _ResultCard(
+          title: 'EVALUATION SCOPE SUMMARY',
+          icon: Icons.checklist_rtl_rounded,
+          iconColor: kAccent,
+          child: Column(
+            children: [
+              _ScopeRow('USER PROMPT EVALUATED', true),
+              _ScopeRow('GEMINI RESPONSE EVALUATED', r.successfulResponses.any((s) => s.agent.id == 'gemini')),
+              _ScopeRow('GROQ RESPONSE EVALUATED', r.successfulResponses.any((s) => s.agent.id == 'groq')),
+              _ScopeRow('FINAL CONSENSUS EVALUATED', r.finalAnswer != null),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Section 3: 12 NIST GAI Risk Matrix
+        _ResultCard(
+          title: 'NIST GAI RISK MATRIX (12 CATEGORIES)',
+          icon: Icons.grid_view_rounded,
+          iconColor: const Color(0xFF9C88FF),
+          child: Column(
+            children: nist.risks.map((risk) {
+              final isExpanded = _expandedNistRisks.contains(risk.riskId);
+              return _NistRiskCard(
+                risk: risk,
+                isExpanded: isExpanded,
+                onToggle: () => setState(() {
+                  if (isExpanded) {
+                    _expandedNistRisks.remove(risk.riskId);
+                  } else {
+                    _expandedNistRisks.add(risk.riskId);
+                  }
+                }),
+              );
+            }).toList(),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Section 4: Active Guardrail Checks
+        _ResultCard(
+          title: 'ACTIVE GUARDRAIL CHECKS',
+          icon: Icons.verified_user_outlined,
+          iconColor: kSuccess,
+          child: Column(
+            children: nist.guardrails.map((g) => _GuardrailTile(control: g)).toList(),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Section 5: AI Council Actions (Before / After Impact)
+        _ResultCard(
+          title: 'AI COUNCIL MITIGATION ACTIONS',
+          icon: Icons.alt_route_rounded,
+          iconColor: kWarning,
+          child: Column(
+            children: nist.actions.map((act) => _ActionTile(action: act)).toList(),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Section 6: Model Agreement Analysis
+        _ResultCard(
+          title: 'MODEL AGREEMENT ANALYSIS',
+          icon: Icons.handshake_outlined,
+          iconColor: kPrimary,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Agreement Score: ${nist.agreement.agreementPercentage}%',
+                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: kPrimary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      nist.agreement.agreementLevel,
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: kPrimary),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'AI-generated agreement estimate based on semantic cross-model comparison.',
+                style: GoogleFonts.inter(fontSize: 11, color: Colors.white38),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Section 7: Evaluation Transparency Footer
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: kCard,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.white38, size: 16),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Evaluated by: ${nist.evaluatedBy} · Participating: ${nist.modelsParticipating}',
+                  style: GoogleFonts.inter(fontSize: 11, color: Colors.white54),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // TAB 2: INDIVIDUAL AGENT PERSPECTIVES
+  // ─────────────────────────────────────────────
+  Widget _buildPerspectivesTab(CouncilResult r) {
+    final responses = r.successfulResponses;
+    if (responses.isEmpty) {
+      return const Center(child: Text('No successful agent responses available.'));
+    }
+
+    return Column(
+      children: responses.asMap().entries.map((entry) {
+        final i = entry.key;
+        final resp = entry.value;
+        final isExpanded = _expandedAgents.contains(resp.agent.id);
+        return Padding(
+          padding: EdgeInsets.only(bottom: i < responses.length - 1 ? 12 : 0),
+          child: _AgentResponseCard(
+            response: resp,
+            isExpanded: isExpanded,
+            onToggle: () => setState(() {
+              if (isExpanded) {
+                _expandedAgents.remove(resp.agent.id);
+              } else {
+                _expandedAgents.add(resp.agent.id);
+              }
+            }),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -1105,8 +1460,351 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
 }
 
 // ─────────────────────────────────────────────
-// REUSABLE COMPONENTS
+// REUSABLE COMPONENTS FOR NIST BOARD & UI
 // ─────────────────────────────────────────────
+class _TabButton extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final bool isSelected;
+  final String? badge;
+  final VoidCallback onTap;
+
+  const _TabButton({
+    required this.title,
+    required this.icon,
+    required this.isSelected,
+    this.badge,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isSelected ? kPrimary : Colors.white54;
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? kPrimary.withValues(alpha: 0.18) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: isSelected ? kPrimary.withValues(alpha: 0.4) : Colors.transparent),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 15, color: color),
+                  const SizedBox(width: 6),
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                      color: isSelected ? Colors.white : Colors.white54,
+                    ),
+                  ),
+                ],
+              ),
+              if (badge != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  badge!,
+                  style: GoogleFonts.inter(fontSize: 8, color: kAccent, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ScopeRow extends StatelessWidget {
+  final String label;
+  final bool evaluated;
+  const _ScopeRow(this.label, this.evaluated);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(
+            evaluated ? Icons.check_circle_rounded : Icons.cancel_rounded,
+            color: evaluated ? kSuccess : Colors.white24,
+            size: 16,
+          ),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: evaluated ? Colors.white : Colors.white38,
+              fontWeight: evaluated ? FontWeight.w500 : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NistRiskCard extends StatelessWidget {
+  final NistRiskResult risk;
+  final bool isExpanded;
+  final VoidCallback onToggle;
+
+  const _NistRiskCard({
+    required this.risk,
+    required this.isExpanded,
+    required this.onToggle,
+  });
+
+  Color get _levelColor {
+    switch (risk.riskLevel) {
+      case 'CRITICAL':
+        return kDanger;
+      case 'HIGH':
+        return kDanger;
+      case 'MODERATE':
+        return kWarning;
+      case 'LOW':
+      default:
+        return kSuccess;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: kBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _levelColor.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: onToggle,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 22,
+                        height: 22,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: _levelColor.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '${risk.riskId}',
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: _levelColor),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          risk.riskName,
+                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _levelColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${risk.riskScore}/100 · ${risk.riskLevel}',
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: _levelColor),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(
+                        isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                        color: Colors.white38,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: risk.riskScore / 100.0,
+                      minHeight: 4,
+                      backgroundColor: Colors.white10,
+                      color: _levelColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isExpanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(color: Colors.white10),
+                  const SizedBox(height: 6),
+                  _NistDetailField('DESCRIPTION', risk.description, Colors.white70),
+                  const SizedBox(height: 8),
+                  _NistDetailField('EVIDENCE', risk.evidence, kAccent),
+                  const SizedBox(height: 8),
+                  _NistDetailField('AFFECTED CONTENT', risk.affectedContent, Colors.white54),
+                  const SizedBox(height: 8),
+                  _NistDetailField('MITIGATION ACTION', risk.mitigation, _levelColor),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NistDetailField extends StatelessWidget {
+  final String label;
+  final String content;
+  final Color color;
+
+  const _NistDetailField(this.label, this.content, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: color, letterSpacing: 1),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          content,
+          style: GoogleFonts.inter(fontSize: 12, color: Colors.white70, height: 1.4),
+        ),
+      ],
+    );
+  }
+}
+
+class _GuardrailTile extends StatelessWidget {
+  final GuardrailControlResult control;
+  const _GuardrailTile({required this.control});
+
+  Color get _statusColor {
+    switch (control.status) {
+      case 'BLOCKED':
+        return kDanger;
+      case 'TRIGGERED':
+        return kDanger;
+      case 'WATCH':
+        return kWarning;
+      case 'PASSED':
+      default:
+        return kSuccess;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.shield_outlined, color: _statusColor, size: 16),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      control.guardrailName,
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    Text(
+                      control.status,
+                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: _statusColor),
+                    ),
+                  ],
+                ),
+                Text(
+                  'Reason: ${control.reason} · Action: ${control.actionTaken}',
+                  style: GoogleFonts.inter(fontSize: 11, color: Colors.white54),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  final EvaluationAction action;
+  const _ActionTile({required this.action});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: kBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, size: 14, color: kWarning),
+                const SizedBox(width: 6),
+                Text(
+                  'RISK: ${action.originalRisk}',
+                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: kWarning),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Action Taken: ${action.actionTaken}',
+              style: GoogleFonts.inter(fontSize: 11, color: Colors.white70),
+            ),
+            Text(
+              'Final Output Impact: ${action.finalOutputImpact}',
+              style: GoogleFonts.inter(fontSize: 11, color: kAccent, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CouncilIcon extends StatelessWidget {
   final double size;
   const _CouncilIcon({this.size = 44});
